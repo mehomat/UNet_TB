@@ -62,11 +62,11 @@ def train_net(save_name = None):
             A.RandomRotate90(p=1),
             A.RandomCrop(crop_window, crop_window, p=1),
             A.GridDistortion(p=0.6),
-            A.ElasticTransform(p=0.6, alpha=100, sigma=200 * 0.05, alpha_affine=200 * 0.03),
-            A.ShiftScaleRotate(p=1, shift_limit=0.2, scale_limit=0.25, rotate_limit=45),
+            A.ElasticTransform(p=0.6, alpha=100, sigma=200 * 0.05),
+            A.Affine(p=1, translate_percent=(-0.2, 0.2), scale=(0.75, 1.25), rotate=(-45, 45)),
             A.GaussianBlur(p=0.6, blur_limit=0, sigma_limit=(0.1, 2.0)),
             A.Lambda(name='gauss-noise', image=custom_gauss_noise, p=0.5),
-            A.GridDropout(p=0.5, ratio=0.5, unit_size_min=None, unit_size_max=None, holes_number_x=None, holes_number_y=None, shift_x=0, shift_y=0, random_offset=True, fill_value=0, mask_fill_value=None),
+            A.GridDropout(p=0.3, ratio=0.3, unit_size_range=None, holes_number_xy=None, shift_xy= (0,0), random_offset=True, fill_mask=None),
             A.Lambda(name='normalize', image=custom_normalize, p=1.0),
             A.Lambda(name='to_tensor', image=custom_to_tensor, mask=custom_to_tensor, p=1.0)
         ]
@@ -78,17 +78,14 @@ def train_net(save_name = None):
 
     validate_dataset = custom_loader_training(phase_ims = phase_val,
                                               mask_ims = mask_val,
-                                              transform = A.Compose([A.Lambda(name='normalize', image=custom_normalize, p=1.0),
+                                              transform = A.Compose([A.PadIfNeeded(min_height=None, min_width=None,
+                                                                                   pad_height_divisor=16, pad_width_divisor=16,
+                                                                                   border_mode=0),   # zero-pad to next multiple of 16
+                                                                    A.Lambda(name='normalize', image=custom_normalize, p=1.0),
                                                                     A.Lambda(name='to_tensor', image=custom_to_tensor, mask=custom_to_tensor, p=1.0),
                                                                      ]))
-                                              #transform = A.Compose([A.RandomCrop(512, 512,p=1),
-                                              #                      A.Lambda(name='normalize', image=custom_normalize, p=1.0),
-                                              #                      A.Lambda(name='to_tensor', image=custom_to_tensor, mask=custom_to_tensor, p=1.0),
-                                              #                       ]))
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # net = UNet()
-    # net = UNet_deep(max_filters=1024)
     net = UNet(max_filters = 256)
     net.cuda()
     
