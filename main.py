@@ -54,19 +54,19 @@ def train_net(save_name = None):
     print(f'Number of images for validation: {len(phase_val)}')
 
     #specify transformations and unets
-    crop_window = 176
+    crop_window = 144
 
     #use albumentations library
     training_transform = A.Compose(
         [   
             A.RandomRotate90(p=1),
             A.RandomCrop(crop_window, crop_window, p=1),
-            A.GridDistortion(p=0.6),
-            A.ElasticTransform(p=0.6, alpha=100, sigma=200 * 0.05),
-            A.Affine(p=1, translate_percent=(-0.2, 0.2), scale=(0.75, 1.25), rotate=(-45, 45)),
+            A.GridDistortion(p=0.4),
+            A.ElasticTransform(p=0.4, alpha=50, sigma=20),
+            A.Affine(p=0.8, translate_percent=(-0.2, 0.2), scale=(0.75, 1.25), rotate=(-45, 45)),
             A.GaussianBlur(p=0.6, blur_limit=0, sigma_limit=(0.1, 2.0)),
             A.Lambda(name='gauss-noise', image=custom_gauss_noise, p=0.5),
-            A.GridDropout(p=0.3, ratio=0.3, unit_size_range=None, holes_number_xy=None, shift_xy= (0,0), random_offset=True, fill_mask=None),
+            A.GridDropout(p=0.3, ratio=0.3, random_offset=True),
             A.Lambda(name='normalize', image=custom_normalize, p=1.0),
             A.Lambda(name='to_tensor', image=custom_to_tensor, mask=custom_to_tensor, p=1.0)
         ]
@@ -108,10 +108,11 @@ def train_net(save_name = None):
     #             break
     # return
 
-    optimizer = torch.optim.SGD(net.parameters(), lr = 0.01, momentum = 0.9)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = 5, gamma = 0.5)
-    # scheduler = None
-    num_epochs = 30
+    #optimizer = torch.optim.SGD(net.parameters(), lr = 0.01, momentum = 0.9)
+    optimizer = torch.optim.Adam(net.parameters(), lr=1e-3)
+    #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = 5, gamma = 0.5)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
+    num_epochs = 60
     
     classifier = mm_classifier(net=net, 
                                optimizer = optimizer, 
@@ -123,7 +124,7 @@ def train_net(save_name = None):
  
 def main():
     #fill in the name
-    NET_NAME = 'UNet_TB_256'
+    NET_NAME = 'UNet_TB_256_Adam'
     save_name = f"/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/models/{NET_NAME}.pth"
     train_net(save_name)
 

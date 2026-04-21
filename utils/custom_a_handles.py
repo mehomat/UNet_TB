@@ -5,7 +5,11 @@ import torch
 #to be used with albumentations lambda transformation
 def custom_normalize(image, **kwargs):
     #HANDLE TO A CUSTOM NORMALIZATION FUNCTION TO BE USED WITH ALBUMENTATION LIBRARY LABMDA TRANSFORMATION FUNCTION
-    image = (image - np.mean(image)) / np.std(image)
+    mean = np.mean(image)
+    std = np.std(image)
+    if std < 1e-6:                          # guard against flat/empty patches
+        return np.zeros_like(image, dtype=np.float32)
+    image = ((image - mean) / std).astype(np.float32)
     return image
 
 def custom_to_tensor(image, **kwargs):
@@ -18,11 +22,11 @@ def custom_to_tensor(image, **kwargs):
 
 def custom_gauss_noise(image,**kwargs):
     #HANDLE TO A CUSTOM NORMALIZATION FUNCTION TO BE USED WITH ALBUMENTATION LIBRARY LABMDA TRANSFORMATION FUNCTION
-    mean = 0
-    var = np.random.uniform((2**16)/4,(2**16)*4)
-    sigma = var ** 0.5
-    random_state = np.random.RandomState(np.random.randint(0, 2 ** 32 - 1))
-    gauss = random_state.normal(mean, sigma, image.shape)
+    # For 8-bit images (0-255): sigma 2-20 is realistic microscopy noise
+    sigma = np.random.uniform(2, 20)
+    gauss = np.random.normal(0, sigma, image.shape)
+    #print(f"image range: [{image.min()}, {image.max()}], noise range: [{gauss.min()}, {gauss.max()}]")
+    return image + gauss
 
     return image + gauss
 

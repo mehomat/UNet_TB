@@ -35,13 +35,14 @@ class mm_classifier:
 
     def loss_function(self, pred, target):
         #define loss as BCE + DC
-        #print(f'pred max value:{torch.max(pred)}, min value: {torch.min(pred)}')
-        #release from logits
         pred = torch.sigmoid(pred)
 
         num = target.size(0)
         m1 = pred.view(num,-1)
         m2 = target.view(num,-1)
+        # DEBUG — remove after fix is confirmed
+        #print(f"m1 min: {m1.min():.4f}, max: {m1.max():.4f}")#, unique vals: {torch.unique(m2[:10])}")
+
         #print(f'm1 max value:{torch.max(m1)}, min value: {torch.min(m1)}')
         #print(f'm2 max value:{m2.max()}, min value: {m2.min()}')
         
