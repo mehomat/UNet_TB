@@ -8,7 +8,7 @@ from utils.custom_a_handles import custom_normalize, custom_to_tensor, custom_ga
 
 #using albumentations library
 import albumentations as A
-import albumentations.augmentations.functional as F
+#import albumentations.augmentations.functional as F
 from albumentations.pytorch import ToTensorV2
 
 # from utils.unet import UNet
@@ -21,6 +21,8 @@ import numpy as np
 
 from utils.load_files import getFileList
 
+from sklearn.model_selection import train_test_split
+
 # from supporting_functions.loadDataSets import mmDataSetTrain
 # import supporting_functions.customTransformations as ct
 # from supporting_functions.mmClassifier import mmClassifier
@@ -28,53 +30,28 @@ from utils.load_files import getFileList
 def train_net(save_name = None):
 
     #load the data
-    train = 'channels'
+    train = 'cells'
 
     if train == 'cells':
         phase_dirs =[
-                    ('/hdd/RecPAIR/Microscopy/EXP-20-BQ2489/GroundTruths/exp4_agarosePad_phase/', ''),
-                    ('/hdd/RecPAIR/Microscopy/EXP-20-BQ2489/exp3_agarosePad_phase/',''),
-                    ('/hdd/RecPAIR/Microscopy/EXP-20-BQ2489/BQ2462/Kuba/','kuba_raw'),
-                    ('/hdd/RecPAIR/Microscopy/EXP-20-BQ2489/BQ2462/Praneeth/','P_raw'),
-                    ('/hdd/RecPAIR/Microscopy/EXP-20-BQ2489/BV3242/exp8_phase',''),
-                    ('/hdd/RecPAIR/Microscopy/EXP-20-BQ2489/BQ2462/empty_MM_channels/','aphase'),
-                    ('/hdd/RecPAIR/Microscopy/EXP-20-BQ2489/BT2878/','raw')
+                    ('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/KI_data', ''),
                     ]
         
-        phase = [getFileList(dr,nm) for dr, nm in phase_dirs]
-        phase = [this_phase for each_set in phase for this_phase in each_set]
+    images = [getFileList(dr,nm) for dr, nm in phase_dirs]
+    images = [this_phase for each_set in images for this_phase in each_set]
 
-        mask_dirs = [
-                    ('/hdd/RecPAIR/Microscopy/EXP-20-BQ2489/GroundTruths/exp4_agarosePad_gt/', ''),
-                    ('/hdd/RecPAIR/Microscopy/EXP-20-BQ2489/exp3_agarosePad_gt/',''),
-                    ('/hdd/RecPAIR/Microscopy/EXP-20-BQ2489/BQ2462/Kuba/','kuba_gt'),
-                    ('/hdd/RecPAIR/Microscopy/EXP-20-BQ2489/BQ2462/Praneeth/','P_gt'),
-                    ('/hdd/RecPAIR/Microscopy/EXP-20-BQ2489/BV3242/exp8_gt',''),
-                    ('/hdd/RecPAIR/Microscopy/EXP-20-BQ2489/BQ2462/empty_MM_channels/','gt'),
-                    ('/hdd/RecPAIR/Microscopy/EXP-20-BQ2489/BT2878/','gt')
-                    ]
-
-    if train == 'channels':
-        phase_dirs =[
-                    ('/hdd/RecPAIR/Microscopy/EXP-19-BQ2462 neural net el665_el1544 P1/BQ2485_channels/1_neuralNetChannels/','aphase'),
-                    ('/hdd/RecPAIR/Microscopy/EXP-19-BQ2462 neural net el665_el1544 P1/BQ2490_chans/phase/','')
-                    ]
-        
-        phase = [getFileList(dr,nm) for dr, nm in phase_dirs]
-        phase = [this_phase for each_set in phase for this_phase in each_set]
-
-        mask_dirs = [
-                    ('/hdd/RecPAIR/Microscopy/EXP-19-BQ2462 neural net el665_el1544 P1/BQ2485_channels/analysis_neuralNet/',''),
-                    ('/hdd/RecPAIR/Microscopy/EXP-19-BQ2462 neural net el665_el1544 P1/BQ2490_chans/mask/','')
-                    ]
-
-    mask = [getFileList(dr,nm) for dr, nm in mask_dirs]
-    mask = [this_mask for each_set in mask for this_mask in each_set]
+    phase = images[::2]
+    mask = images[1::2]
    
-    # phase = phase[1:10]
-    # mask = mask[1:10]
-    print(len(phase))
-    print(len(mask))
+    print(f'Number of phase images: {len(phase)}')
+    print(f'Number of binary masks : {len(mask)}')
+
+    # Split filenames first
+    phase_train, phase_val, mask_train, mask_val = train_test_split(
+            phase, mask, test_size=0.2, random_state=1)
+    
+    print(f'Number of images for training: {len(phase_train)}')
+    print(f'Number of images for validation: {len(phase_val)}')
 
     #specify transformations and unets
     crop_window = 512
@@ -95,12 +72,12 @@ def train_net(save_name = None):
         ]
         )
 
-    training_dataset = custom_loader_training( phase_ims = phase, 
-                                               mask_ims  = mask,
+    training_dataset = custom_loader_training( phase_ims = phase_train,
+                                               mask_ims  = mask_train,
                                                transform = training_transform)
 
-    validate_dataset = custom_loader_training(phase_ims = phase, 
-                                              mask_ims = mask, 
+    validate_dataset = custom_loader_training(phase_ims = phase_val,
+                                              mask_ims = mask_val, 
                                               transform = A.Compose([A.RandomCrop(512, 512,p=1),
                                                                     A.Lambda(name='normalize', image=custom_normalize, p=1.0),
                                                                     A.Lambda(name='to_tensor', image=custom_to_tensor, mask=custom_to_tensor, p=1.0),
