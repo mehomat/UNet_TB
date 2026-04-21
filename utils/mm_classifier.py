@@ -35,13 +35,15 @@ class mm_classifier:
 
     def loss_function(self, pred, target):
         #define loss as BCE + DC
-        
+        #print(f'pred max value:{torch.max(pred)}, min value: {torch.min(pred)}')
         #release from logits
         pred = torch.sigmoid(pred)
 
         num = target.size(0)
         m1 = pred.view(num,-1)
         m2 = target.view(num,-1)
+        #print(f'm1 max value:{torch.max(m1)}, min value: {torch.min(m1)}')
+        #print(f'm2 max value:{m2.max()}, min value: {m2.min()}')
         
         # binary cross entropy 
         BCE = F.binary_cross_entropy(m1,m2)
@@ -91,7 +93,7 @@ class mm_classifier:
             res = res.to("cpu").detach().numpy().squeeze(0).squeeze(0)
             
             file_name_seg = 'epoch_' + str(self.epoch_counter+1) + '_' + str(i_batch) + '_seg.tiff'
-            io.imsave('/hdd/RecPAIR/PraNetTraining/' + file_name_seg, res)
+            io.imsave('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/Validation/' + file_name_seg, res)
             
             if i_batch > 0:
                 torch.cuda.empty_cache()

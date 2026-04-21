@@ -54,7 +54,7 @@ def train_net(save_name = None):
     print(f'Number of images for validation: {len(phase_val)}')
 
     #specify transformations and unets
-    crop_window = 512
+    crop_window = 176
 
     #use albumentations library
     training_transform = A.Compose(
@@ -64,7 +64,7 @@ def train_net(save_name = None):
             A.GridDistortion(p=0.6),
             A.ElasticTransform(p=0.6, alpha=100, sigma=200 * 0.05, alpha_affine=200 * 0.03),
             A.ShiftScaleRotate(p=1, shift_limit=0.2, scale_limit=0.25, rotate_limit=45),
-            A.GaussianBlur(p=0.6, blur_limit=(3, 7), sigma_limit=0),
+            A.GaussianBlur(p=0.6, blur_limit=0, sigma_limit=(0.1, 2.0)),
             A.Lambda(name='gauss-noise', image=custom_gauss_noise, p=0.5),
             A.GridDropout(p=0.5, ratio=0.5, unit_size_min=None, unit_size_max=None, holes_number_x=None, holes_number_y=None, shift_x=0, shift_y=0, random_offset=True, fill_value=0, mask_fill_value=None),
             A.Lambda(name='normalize', image=custom_normalize, p=1.0),
@@ -77,16 +77,19 @@ def train_net(save_name = None):
                                                transform = training_transform)
 
     validate_dataset = custom_loader_training(phase_ims = phase_val,
-                                              mask_ims = mask_val, 
-                                              transform = A.Compose([A.RandomCrop(512, 512,p=1),
-                                                                    A.Lambda(name='normalize', image=custom_normalize, p=1.0),
+                                              mask_ims = mask_val,
+                                              transform = A.Compose([A.Lambda(name='normalize', image=custom_normalize, p=1.0),
                                                                     A.Lambda(name='to_tensor', image=custom_to_tensor, mask=custom_to_tensor, p=1.0),
                                                                      ]))
+                                              #transform = A.Compose([A.RandomCrop(512, 512,p=1),
+                                              #                      A.Lambda(name='normalize', image=custom_normalize, p=1.0),
+                                              #                      A.Lambda(name='to_tensor', image=custom_to_tensor, mask=custom_to_tensor, p=1.0),
+                                              #                       ]))
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     # net = UNet()
     # net = UNet_deep(max_filters=1024)
-    net = UNet(max_filters = 512)
+    net = UNet(max_filters = 256)
     net.cuda()
     
     training_loader = DataLoader(training_dataset, batch_size=4, shuffle=True, num_workers = 10)
@@ -123,8 +126,8 @@ def train_net(save_name = None):
  
 def main():
     #fill in the name
-    NET_NAME = 'UNet_normal_growthChannels_2021_12_07'
-    save_name = f"/hdd/RecPAIR/{NET_NAME}.pth"
+    NET_NAME = 'UNet_TB_256'
+    save_name = f"/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/models/{NET_NAME}.pth"
     train_net(save_name)
 
 if __name__ == '__main__':
