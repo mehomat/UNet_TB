@@ -32,6 +32,8 @@ class mm_classifier:
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.save_name = save_name
+        self.train_losses = []
+        self.val_losses = []
 
     def loss_function(self, pred, target):
         #define loss as BCE + DC
@@ -80,25 +82,28 @@ class mm_classifier:
             loss.backward()
             self.optimizer.step()
         
-        print(f"loss: {np.mean(running_losses)}")
+        epoch_loss = np.mean(running_losses)
+        print(f"loss: {epoch_loss}")
+        return epoch_loss
 
     def validate_epoch(self, validation_loader):
-        
+        #val_losses = []
         #run network on validation data after each epoch.
-        for i_batch, (im, target) in enumerate(validation_loader):
-            
-            im = im.cuda() 
-            res = self.net(im)
+        with torch.no_grad():
+            for i_batch, (im, target) in enumerate(validation_loader):
+                
+                im = im.cuda() 
+                res = self.net(im)
 
-            res = torch.sigmoid(res)
-            res = res.to("cpu").detach().numpy().squeeze(0).squeeze(0)
-            
-            file_name_seg = 'epoch_' + str(self.epoch_counter+1) + '_' + str(i_batch) + '_seg.tiff'
-            io.imsave('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/Validation/' + file_name_seg, res)
-            
-            if i_batch > 0:
-                torch.cuda.empty_cache()
-                break        
+                res = torch.sigmoid(res)
+                res = res.to("cpu").detach().numpy().squeeze(0).squeeze(0)
+                
+                file_name_seg = 'epoch_' + str(self.epoch_counter+1) + '_' + str(i_batch) + '_seg.tiff'
+                io.imsave('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/Validation/' + file_name_seg, res)
+                
+                if i_batch > 0:
+                    #torch.cuda.empty_cache()
+                    break
         
     def validate_custom(self):
         #small validation on the fixed set of real experimental data, 2 for mother machine, 2 for giant chip, no agarose pad yet.
@@ -125,11 +130,13 @@ class mm_classifier:
         # run a single epoch and validate the output.
         
         self.net.train()
-        self.train_epoch(train_loader)
+        train_loss = self.train_epoch(train_loader)
 
         self.net.eval()
         self.validate_epoch(validation_loader)
         # self.validate_custom()
+
+        self.train_losses.append(train_loss)
         
     def train(self, train_loader: DataLoader, validation_loader: DataLoader):
         
@@ -156,7 +163,16 @@ class mm_classifier:
                     'optimizer_state_dict' : self.optimizer.state_dict()
                     },  self.save_name)
         
-        
+        plt.figure()
+        plt.plot(self.train_losses, label='Train Loss')
+        plt.plot(self.val_losses, label='Validation Loss')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.legend()
+        plt.title('Training and Validation Loss')
+        #plt.show()
+
+        plt.savefig('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/loss_curve.png')
         #save only the model
         # torch.save({'model_state_dict' : self.net.state_dict()},  self.save_name)
              

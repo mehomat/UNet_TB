@@ -22,6 +22,7 @@ import numpy as np
 from utils.load_files import getFileList
 
 from sklearn.model_selection import train_test_split
+import time, datetime
 
 # from supporting_functions.loadDataSets import mmDataSetTrain
 # import supporting_functions.customTransformations as ct
@@ -59,11 +60,11 @@ def train_net(save_name = None):
     #use albumentations library
     training_transform = A.Compose(
         [   
-            A.RandomRotate90(p=1),
+            #A.RandomRotate90(p=1),
             A.RandomCrop(crop_window, crop_window, p=1),
             A.GridDistortion(p=0.4),
             A.ElasticTransform(p=0.4, alpha=50, sigma=20),
-            A.Affine(p=0.8, translate_percent=(-0.2, 0.2), scale=(0.75, 1.25), rotate=(-45, 45)),
+            A.Affine(p=0.8, translate_percent=(-0.2, 0.2), scale=(0.75, 1.25), rotate=(-5, 5)),
             A.GaussianBlur(p=0.6, blur_limit=0, sigma_limit=(0.1, 2.0)),
             A.Lambda(name='gauss-noise', image=custom_gauss_noise, p=0.5),
             A.GridDropout(p=0.3, ratio=0.3, random_offset=True),
@@ -72,6 +73,7 @@ def train_net(save_name = None):
         ]
         )
 
+    """
     training_dataset = custom_loader_training( phase_ims = phase_train,
                                                mask_ims  = mask_train,
                                                transform = training_transform)
@@ -83,10 +85,23 @@ def train_net(save_name = None):
                                                                                    border_mode=0),   # zero-pad to next multiple of 16
                                                                     A.Lambda(name='normalize', image=custom_normalize, p=1.0),
                                                                     A.Lambda(name='to_tensor', image=custom_to_tensor, mask=custom_to_tensor, p=1.0),
-                                                                     ]))
+                                                                    ]))
+    """
+    training_dataset = custom_loader_training( phase_ims = phase,
+                                               mask_ims  = mask,
+                                               transform = training_transform)
+
+    validate_dataset = custom_loader_training(phase_ims = phase,
+                                              mask_ims = mask,
+                                              transform = A.Compose([A.PadIfNeeded(min_height=None, min_width=None,
+                                                                                   pad_height_divisor=16, pad_width_divisor=16,
+                                                                                   border_mode=0),   # zero-pad to next multiple of 16
+                                                                    A.Lambda(name='normalize', image=custom_normalize, p=1.0),
+                                                                    A.Lambda(name='to_tensor', image=custom_to_tensor, mask=custom_to_tensor, p=1.0),
+                                                                    ]))
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    net = UNet(max_filters = 256)
+    net = UNet(max_filters = 512)
     net.cuda()
     
     training_loader = DataLoader(training_dataset, batch_size=4, shuffle=True, num_workers = 10)
@@ -109,10 +124,11 @@ def train_net(save_name = None):
     # return
 
     #optimizer = torch.optim.SGD(net.parameters(), lr = 0.01, momentum = 0.9)
-    optimizer = torch.optim.Adam(net.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(net.parameters(), lr=1e-4)
     #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = 5, gamma = 0.5)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
-    num_epochs = 60
+    #scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,mode='min',factor=0.3,patience=5,verbose=True)
+    num_epochs = 120
     
     classifier = mm_classifier(net=net, 
                                optimizer = optimizer, 
@@ -124,7 +140,9 @@ def train_net(save_name = None):
  
 def main():
     #fill in the name
-    NET_NAME = 'UNet_TB_256_Adam'
+    ts = time.time()
+    ts = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H:%M:%S')
+    NET_NAME = 'UNet_TB_512_Adam_'+ts
     save_name = f"/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/models/{NET_NAME}.pth"
     train_net(save_name)
 
