@@ -24,6 +24,8 @@ from utils.load_files import getFileList
 from sklearn.model_selection import train_test_split
 import time, datetime
 
+from utils.cell_aware_crop import CellAwareCrop
+
 # from supporting_functions.loadDataSets import mmDataSetTrain
 # import supporting_functions.customTransformations as ct
 # from supporting_functions.mmClassifier import mmClassifier
@@ -61,9 +63,10 @@ def train_net(save_name = None):
     training_transform = A.Compose(
         [   
             #A.RandomRotate90(p=1),
-            A.RandomCrop(crop_window, crop_window, p=1),
+            #A.RandomCrop(crop_window, crop_window, p=1),
+            CellAwareCrop(p=1,crop_size=crop_window, min_cell_fraction=0.05, max_attempts=20),
             A.GridDistortion(p=0.4),
-            A.ElasticTransform(p=0.4, alpha=50, sigma=20),
+            #A.ElasticTransform(p=0.4, alpha=50, sigma=20),
             A.Affine(p=0.8, translate_percent=(-0.2, 0.2), scale=(0.75, 1.25), rotate=(-5, 5)),
             A.GaussianBlur(p=0.6, blur_limit=0, sigma_limit=(0.1, 2.0)),
             A.Lambda(name='gauss-noise', image=custom_gauss_noise, p=0.5),
@@ -101,11 +104,12 @@ def train_net(save_name = None):
                                                                     ]))
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    net = UNet(max_filters = 512)
+    net_size = 256
+    net = UNet(max_filters = net_size)
     net.cuda()
     
     training_loader = DataLoader(training_dataset, batch_size=4, shuffle=True, num_workers = 10)
-    validation_loader = DataLoader(validate_dataset, batch_size=1, shuffle=True)
+    validation_loader = DataLoader(validate_dataset, batch_size=1, shuffle=False)
 
     # quick test
     # for ti, (im,mask) in enumerate(training_loader):
@@ -142,7 +146,7 @@ def main():
     #fill in the name
     ts = time.time()
     ts = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H:%M:%S')
-    NET_NAME = 'UNet_TB_512_Adam_'+ts
+    NET_NAME = 'UNet_TB_256_Adam_'+ts
     save_name = f"/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/models/{NET_NAME}.pth"
     train_net(save_name)
 

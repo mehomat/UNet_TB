@@ -108,7 +108,7 @@ def segmentTestExp():
 
     dir = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/KI_data'
 
-    res_dir = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/KI_data_seg'
+    res_dir = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/metrics/model_unet_256'
 
     images = [f"{dir}/{x}" for x in os.listdir(dir)]
     images.sort()
@@ -116,9 +116,9 @@ def segmentTestExp():
     images = images[::2]
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    net = UNet(max_filters = 512)
-
-    NET_PATH = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/models/UNet_TB_512_Adam_252026-04-22_12:15:01_120.pth'
+    net = UNet(max_filters = 256)
+    NET_PATH = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/models/UNet_TB_256_Adam_2026-04-28_14:27:18_120.pth'
+    #NET_PATH = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/models/UNet_TB_512_Adam_252026-04-22_12:15:01_120.pth'
 
     saved_net = torch.load(NET_PATH)
     net.load_state_dict(saved_net['model_state_dict'])
@@ -157,7 +157,7 @@ def segmentTestExp():
             #res = measure.label(res)
 
             res = res.astype('uint8')
-            res[res==1] = 255
+            #res[res==1] = 255
             #props = measure.regionprops(res)
             
             #mat = np.zeros(np.shape(res))
@@ -170,6 +170,8 @@ def segmentTestExp():
             #res = morphology.dilation(mat, morphology.disk(3,dtype='uint16'))
             #res = res.astype('uint16')
             filename = f.split('/')[-1]
+            filename, ext = os.path.splitext(filename)
+            filename = filename + "_masks" + ext
             io.imsave(os.path.join(res_dir,filename),res,check_contrast=False)
 
 def main():
