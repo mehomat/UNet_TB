@@ -101,7 +101,7 @@ class mm_classifier:
                 file_name_seg = 'epoch_' + str(self.epoch_counter+1) + '_' + str(i_batch) + '_seg.tiff'
                 io.imsave('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/Validation/' + file_name_seg, res)
                 
-                if i_batch > 0:
+                if i_batch > -1:
                     #torch.cuda.empty_cache()
                     break
         

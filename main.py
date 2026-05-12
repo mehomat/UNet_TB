@@ -30,15 +30,18 @@ from utils.cell_aware_crop import CellAwareCrop
 # import supporting_functions.customTransformations as ct
 # from supporting_functions.mmClassifier import mmClassifier
 
-def train_net(save_name = None):
+def train_net(save_name=None, train='cells', net_size=256):
 
     #load the data
-    train = 'cells'
-
     if train == 'cells':
         phase_dirs =[
                     ('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/KI_data', ''),
                     ]
+    else:
+        phase_dirs =[
+                    ('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/KI_data_traps_cropped', ''),
+                    ]
+
         
     images = [getFileList(dr,nm) for dr, nm in phase_dirs]
     images = [this_phase for each_set in images for this_phase in each_set]
@@ -50,14 +53,17 @@ def train_net(save_name = None):
     print(f'Number of binary masks : {len(mask)}')
 
     # Split filenames first
-    phase_train, phase_val, mask_train, mask_val = train_test_split(
-            phase, mask, test_size=0.2, random_state=1)
+    #phase_train, phase_val, mask_train, mask_val = train_test_split(
+    #        phase, mask, test_size=0.2, random_state=1)
     
-    print(f'Number of images for training: {len(phase_train)}')
-    print(f'Number of images for validation: {len(phase_val)}')
+    #print(f'Number of images for training: {len(phase_train)}')
+    #print(f'Number of images for validation: {len(phase_val)}')
 
     #specify transformations and unets
-    crop_window = 144
+    if train == 'cells':
+        crop_window = 144
+    else:
+        crop_window = 512
 
     #use albumentations library
     training_transform = A.Compose(
@@ -104,7 +110,6 @@ def train_net(save_name = None):
                                                                     ]))
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    net_size = 256
     net = UNet(max_filters = net_size)
     net.cuda()
     
@@ -146,7 +151,12 @@ def main():
     #fill in the name
     ts = time.time()
     ts = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H:%M:%S')
-    NET_NAME = 'UNet_TB_256_Adam_'+ts
+    train = 'traps'
+    net_size = 256
+    if train == 'cells':
+        NET_NAME = f'unetTB{net_size}_'+ts
+    else:
+        NET_NAME = f'unetTB{net_size}_traps_'+ts
     save_name = f"/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/models/{NET_NAME}.pth"
     train_net(save_name)
 

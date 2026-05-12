@@ -107,18 +107,29 @@ def segmentTestExp():
     #segment a whole bunch of images from a single experiment
 
     dir = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/KI_data'
+    res_dir = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/metrics/model_unet_256_traps'
 
-    res_dir = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/metrics/model_unet_256'
+    # res_dir = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/metrics/model_unet_256'
+
+    # dir = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/EXP-25-CE8709/analysis_results_segmentation_unet/Pa_1/Pos401/chamber_location0'
+    # res_dir = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/EXP-25-CE8709/analysis_results_segmentation_unet/Pa_1/Pos401/masks_location0_v2'
+
+    # dir = '/home/spartak/elflab/BSL3/data/EXP-26-CE8718/therun/Pos101/phase2'
+    # res_dir = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/EXP-26-CE8718/Traps/Pos101'
+    dir = '/home/spartak/elflab/BSL3/data/EXP-26-CE8720/therun/Pos101/phase2'
+    res_dir = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/EXP-26-CE8720/Traps/Pos101_512_Mix'
+    
+    os.makedirs(res_dir,exist_ok=True)
 
     images = [f"{dir}/{x}" for x in os.listdir(dir)]
     images.sort()
-    images = images[:-1]
-    images = images[::2]
+    #images = images[:-1]
+    #images = images[::2]
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     net = UNet(max_filters = 256)
     NET_PATH = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/models/UNet_TB_256_Adam_2026-04-28_14:27:18_120.pth'
-    #NET_PATH = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/models/UNet_TB_512_Adam_252026-04-22_12:15:01_120.pth'
+
 
     saved_net = torch.load(NET_PATH)
     net.load_state_dict(saved_net['model_state_dict'])
@@ -151,7 +162,7 @@ def segmentTestExp():
             res = res.to("cpu").detach().numpy().squeeze(0).squeeze(0)
             
             res = res[0:xorg,0:yorg]
-            res = res > 0.5
+            res = res > 0.9
             #res = morphology.remove_small_objects(res,50)
 
             #res = measure.label(res)
