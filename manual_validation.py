@@ -117,7 +117,9 @@ def segmentTestExp():
     # dir = '/home/spartak/elflab/BSL3/data/EXP-26-CE8718/therun/Pos101/phase2'
     # res_dir = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/EXP-26-CE8718/Traps/Pos101'
     dir = '/home/spartak/elflab/BSL3/data/EXP-26-CE8720/therun/Pos101/phase2'
-    res_dir = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/EXP-26-CE8720/Traps/Pos101_512_Mix'
+    res_dir = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/EXP-26-CE8720/Traps/Pos101_512_Mix2'
+    #dir = '/home/spartak/elflab/BSL3/data/EXP-26-CE8727/therun/Pos101/phase2'
+    #res_dir = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/EXP-26-CE8727/Traps/Pos101_512_Mix2'
     
     os.makedirs(res_dir,exist_ok=True)
 
@@ -127,9 +129,10 @@ def segmentTestExp():
     #images = images[::2]
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    net = UNet(max_filters = 256)
-    NET_PATH = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/models/UNet_TB_256_Adam_2026-04-28_14:27:18_120.pth'
-
+    #net = UNet(max_filters = 256)
+    #NET_PATH = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/models/unetTB256_traps_2026-06-04_18:34:29_120.pth'
+    net = UNet(max_filters = 512)
+    NET_PATH = '/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/models/unetTB512_traps_2026-06-05_14:10:08.pth'
 
     saved_net = torch.load(NET_PATH)
     net.load_state_dict(saved_net['model_state_dict'])
@@ -141,8 +144,9 @@ def segmentTestExp():
         for fi, f in enumerate(images):
             
             im_org = io.imread(f)
-            
             xorg,yorg = np.shape(im_org)
+            #im_org = im_org[:,2*yorg//3:]
+            #xorg,yorg = np.shape(im_org)
             x,y = np.shape(im_org)
             xpad, ypad = 0, 0
             if x%16 != 0:

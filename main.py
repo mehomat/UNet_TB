@@ -39,10 +39,10 @@ def train_net(save_name=None, train='cells', net_size=256):
                     ]
     else:
         phase_dirs =[
-                    ('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/KI_data_traps_cropped', ''),
+                    #('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/KI_data_traps_cropped', ''),
+                    ('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/KI_data_full_traps_cropped', ''),
                     ]
 
-        
     images = [getFileList(dr,nm) for dr, nm in phase_dirs]
     images = [this_phase for each_set in images for this_phase in each_set]
 
@@ -152,13 +152,13 @@ def main():
     ts = time.time()
     ts = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H:%M:%S')
     train = 'traps'
-    net_size = 256
+    net_size = 512#256
     if train == 'cells':
         NET_NAME = f'unetTB{net_size}_'+ts
     else:
         NET_NAME = f'unetTB{net_size}_traps_'+ts
     save_name = f"/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/models/{NET_NAME}.pth"
-    train_net(save_name)
+    train_net(save_name,train=train, net_size=net_size)
 
 if __name__ == '__main__':
     main()
