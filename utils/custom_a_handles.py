@@ -3,6 +3,14 @@ import numpy as np
 import torch
 
 #to be used with albumentations lambda transformation
+def custom_normalize99(image, **kwargs):
+    lower=0.01
+    upper=99.99
+    image = np.array(image).astype(np.float32)
+    image_copy = image.copy()
+    return np.interp(image_copy, 
+                     (np.percentile(image_copy, lower), np.percentile(image_copy, upper)), (0, 1))
+
 def custom_normalize(image, **kwargs):
     #HANDLE TO A CUSTOM NORMALIZATION FUNCTION TO BE USED WITH ALBUMENTATION LIBRARY LABMDA TRANSFORMATION FUNCTION
     mean = np.mean(image)

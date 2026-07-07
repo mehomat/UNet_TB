@@ -4,7 +4,7 @@ import torch
 
 from utils.custom_loader import custom_loader_training
 from utils.mm_classifier import mm_classifier
-from utils.custom_a_handles import custom_normalize, custom_to_tensor, custom_gauss_noise
+from utils.custom_a_handles import custom_normalize, custom_to_tensor, custom_gauss_noise, custom_normalize99
 
 #using albumentations library
 import albumentations as A
@@ -26,10 +26,6 @@ import time, datetime
 
 from utils.cell_aware_crop import CellAwareCrop
 
-# from supporting_functions.loadDataSets import mmDataSetTrain
-# import supporting_functions.customTransformations as ct
-# from supporting_functions.mmClassifier import mmClassifier
-
 def train_net(save_name=None, train='cells', net_size=256):
 
     #load the data
@@ -40,7 +36,8 @@ def train_net(save_name=None, train='cells', net_size=256):
     else:
         phase_dirs =[
                     #('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/KI_data_traps_cropped', ''),
-                    ('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/KI_data_full_traps_cropped', ''),
+                    ('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9769/EXP-26-CF5404/chip_masks', ''),
+                    #('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/KI_data_full_traps_cropped', ''),
                     ]
 
     images = [getFileList(dr,nm) for dr, nm in phase_dirs]
@@ -63,7 +60,8 @@ def train_net(save_name=None, train='cells', net_size=256):
     if train == 'cells':
         crop_window = 144
     else:
-        crop_window = 512
+        crop_window = 400#512
+    crop_window = min(crop_window, net_size)
 
     #use albumentations library
     training_transform = A.Compose(
@@ -77,7 +75,8 @@ def train_net(save_name=None, train='cells', net_size=256):
             A.GaussianBlur(p=0.6, blur_limit=0, sigma_limit=(0.1, 2.0)),
             A.Lambda(name='gauss-noise', image=custom_gauss_noise, p=0.5),
             A.GridDropout(p=0.3, ratio=0.3, random_offset=True),
-            A.Lambda(name='normalize', image=custom_normalize, p=1.0),
+            #A.Lambda(name='normalize', image=custom_normalize, p=1.0),
+            A.Lambda(name='normalize', image=custom_normalize99, p=1.0),
             A.Lambda(name='to_tensor', image=custom_to_tensor, mask=custom_to_tensor, p=1.0)
         ]
         )
@@ -111,26 +110,10 @@ def train_net(save_name=None, train='cells', net_size=256):
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     net = UNet(max_filters = net_size)
-    net.cuda()
+    net.to(device)
     
     training_loader = DataLoader(training_dataset, batch_size=4, shuffle=True, num_workers = 10)
     validation_loader = DataLoader(validate_dataset, batch_size=1, shuffle=False)
-
-    # quick test
-    # for ti, (im,mask) in enumerate(training_loader):
-    #         im = im.numpy()[0][0]
-    #         print('next im')
-    #         print(np.min(im))
-    #         print(np.max(im))
-    #         im = im - np.min(im)
-    #         im = im / np.max(im)
-    #         mask = mask.numpy()[0].astype('uint16')*(2**16-1)
-    #         # blend = cv2.addWeighted(im,1,mask,0.5,0)
-    #         cv2.imshow('blend',im)
-    #         cv2.waitKey(500)
-    #         if ti > 10:
-    #             break
-    # return
 
     #optimizer = torch.optim.SGD(net.parameters(), lr = 0.01, momentum = 0.9)
     optimizer = torch.optim.Adam(net.parameters(), lr=1e-4)
@@ -152,12 +135,12 @@ def main():
     ts = time.time()
     ts = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H:%M:%S')
     train = 'traps'
-    net_size = 512#256
+    net_size = 400#256
     if train == 'cells':
         NET_NAME = f'unetTB{net_size}_'+ts
     else:
         NET_NAME = f'unetTB{net_size}_traps_'+ts
-    save_name = f"/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/models/{NET_NAME}.pth"
+    save_name = f"/home/spartak/elflab/BSL3/analysis/EXP-26-CB9769/models/{NET_NAME}.pth"
     train_net(save_name,train=train, net_size=net_size)
 
 if __name__ == '__main__':

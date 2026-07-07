@@ -35,7 +35,7 @@ class CellAwareCrop(BasicTransform):
         
         # fallback to random
         y = np.random.randint(0, max(1, h - cs))
-        x = np.random.randint(0, max(1, h - cs))
+        x = np.random.randint(0, max(1, w - cs))
         return {'y': y, 'x': x}
 
 

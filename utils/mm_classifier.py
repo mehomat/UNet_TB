@@ -99,7 +99,7 @@ class mm_classifier:
                 res = res.to("cpu").detach().numpy().squeeze(0).squeeze(0)
                 
                 file_name_seg = 'epoch_' + str(self.epoch_counter+1) + '_' + str(i_batch) + '_seg.tiff'
-                io.imsave('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/Validation/' + file_name_seg, res)
+                io.imsave('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9769/Validation/' + file_name_seg, res, check_contrast=False)
                 
                 if i_batch > -1:
                     #torch.cuda.empty_cache()
@@ -149,19 +149,19 @@ class mm_classifier:
 
             self.epoch_counter = self.epoch_counter + 1
         
-            if (epoch+1)%10 == 0:
-                this_save_name = f"{self.save_name[:-4]}_{epoch+1}.pth"
-                torch.save({
-                        'epoch': self.epoch_counter,
-                        'model_state_dict' : self.net.state_dict(),
-                        'optimizer_state_dict' : self.optimizer.state_dict()
-                        },  this_save_name)
+            # if (epoch+1)%10 == 0:
+            #     this_save_name = f"{self.save_name[:-4]}_{epoch+1}.pth"
+            #     torch.save({
+            #             'epoch': self.epoch_counter,
+            #             'model_state_dict' : self.net.state_dict(),
+            #             'optimizer_state_dict' : self.optimizer.state_dict()
+            #             },  this_save_name)
             
-            torch.save({
-                    'epoch': self.epoch_counter,
-                    'model_state_dict' : self.net.state_dict(),
-                    'optimizer_state_dict' : self.optimizer.state_dict()
-                    },  self.save_name)
+            # torch.save({
+            #         'epoch': self.epoch_counter,
+            #         'model_state_dict' : self.net.state_dict(),
+            #         'optimizer_state_dict' : self.optimizer.state_dict()
+            #         },  self.save_name)
         
         plt.figure()
         plt.plot(self.train_losses, label='Train Loss')
@@ -172,7 +172,8 @@ class mm_classifier:
         plt.title('Training and Validation Loss')
         #plt.show()
 
-        plt.savefig('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/loss_curve.png')
+        #self.save_name
+        plt.savefig('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9769/loss_curve.png')
         #save only the model
-        # torch.save({'model_state_dict' : self.net.state_dict()},  self.save_name)
+        torch.save({'model_state_dict' : self.net.state_dict()},  self.save_name)
              
