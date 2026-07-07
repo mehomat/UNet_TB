@@ -20,7 +20,7 @@ class mm_classifier:
     this class is designed to work with albumentations library
     """
     
-    def __init__(self, net, optimizer, scheduler, num_epochs, save_name):
+    def __init__(self, net, optimizer, scheduler, num_epochs, save_dir, net_name):
         """
         The classifier for mm experiment
             net (nn.Module): The neural net module containing the definition of your model
@@ -31,9 +31,10 @@ class mm_classifier:
         self.num_epochs = num_epochs
         self.optimizer = optimizer
         self.scheduler = scheduler
-        self.save_name = save_name
+        self.save_dir = save_dir
         self.train_losses = []
         self.val_losses = []
+        self.save_name = save_dir + "/models/" + net_name
 
     def loss_function(self, pred, target):
         #define loss as BCE + DC
@@ -99,7 +100,7 @@ class mm_classifier:
                 res = res.to("cpu").detach().numpy().squeeze(0).squeeze(0)
                 
                 file_name_seg = 'epoch_' + str(self.epoch_counter+1) + '_' + str(i_batch) + '_seg.tiff'
-                io.imsave('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9769/Validation/' + file_name_seg, res, check_contrast=False)
+                io.imsave(self.save_dir+'/Validation/' + file_name_seg, res, check_contrast=False)
                 
                 if i_batch > -1:
                     #torch.cuda.empty_cache()
@@ -173,7 +174,7 @@ class mm_classifier:
         #plt.show()
 
         #self.save_name
-        plt.savefig('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9769/loss_curve.png')
+        plt.savefig(self.save_dir+'/loss_curve.png')
         #save only the model
         torch.save({'model_state_dict' : self.net.state_dict()},  self.save_name)
              

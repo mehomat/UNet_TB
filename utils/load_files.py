@@ -21,7 +21,7 @@ def getFileList(path_to_file, chan_name = ''):
     return sorted(file_list)
 
 def makeDirs(exp_dir, save_dir):
-    """"supporting function, making folders to put the segmentation images itno
+    """"supporting function, making folders to put the segmentation images into
     args:
     destingation_dir = direction to the experiment directory
     save_dir = SegmentedPhase, or SegmentedChans
@@ -33,6 +33,13 @@ def makeDirs(exp_dir, save_dir):
             seg_dir = root.replace('PreprocessedPhase',save_dir)
             if not os.path.exists(seg_dir):
                 os.makedirs(seg_dir)
+
+def getTrainingPairs(training_dirs):
+    images = [getFileList(dr,nm) for dr, nm in training_dirs]
+    images = [this_phase for each_set in images for this_phase in each_set]
+    phase = images[::2]
+    mask = images[1::2]
+    return phase, mask
 
 def main():
     pass

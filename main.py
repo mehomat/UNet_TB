@@ -9,92 +9,50 @@ from utils.custom_a_handles import custom_normalize, custom_to_tensor, custom_ga
 #using albumentations library
 import albumentations as A
 #import albumentations.augmentations.functional as F
-from albumentations.pytorch import ToTensorV2
 
 # from utils.unet import UNet
-from utils.unet import UNet, UNet_deep
+from utils.unet import UNet
 
 from skimage import io
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
-from utils.load_files import getFileList
+from utils.load_files import getTrainingPairs
 
 from sklearn.model_selection import train_test_split
 import time, datetime
 
 from utils.cell_aware_crop import CellAwareCrop
 
-def train_net(save_name=None, train='cells', net_size=256):
+def train_net(train_dirs, save_dir, net_size=256, training_transform=None, normalize=custom_normalize99, num_epochs=120, scheduler=None, optimizer=None):
 
     #load the data
-    if train == 'cells':
-        phase_dirs =[
-                    ('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/KI_data', ''),
-                    ]
-    else:
-        phase_dirs =[
-                    #('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/KI_data_traps_cropped', ''),
-                    ('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9769/EXP-26-CF5404/chip_masks', ''),
-                    #('/home/spartak/elflab/BSL3/analysis/EXP-26-CB9767/KI_data_full_traps_cropped', ''),
-                    ]
-
-    images = [getFileList(dr,nm) for dr, nm in phase_dirs]
-    images = [this_phase for each_set in images for this_phase in each_set]
-
-    phase = images[::2]
-    mask = images[1::2]
+    phase, mask = getTrainingPairs(train_dirs)
    
     print(f'Number of phase images: {len(phase)}')
     print(f'Number of binary masks : {len(mask)}')
 
-    # Split filenames first
-    #phase_train, phase_val, mask_train, mask_val = train_test_split(
-    #        phase, mask, test_size=0.2, random_state=1)
-    
-    #print(f'Number of images for training: {len(phase_train)}')
-    #print(f'Number of images for validation: {len(phase_val)}')
-
     #specify transformations and unets
-    if train == 'cells':
-        crop_window = 144
-    else:
-        crop_window = 400#512
-    crop_window = min(crop_window, net_size)
+    if training_transform is None:
+        crop_window = min(net_size,400)
+        training_transform = A.Compose(
+            [
+                #A.RandomRotate90(p=1),
+                #A.RandomCrop(crop_window, crop_window, p=1),
+                CellAwareCrop(p=1,crop_size=crop_window, min_cell_fraction=0.05, max_attempts=20),
+                A.GridDistortion(p=0.4),
+                #A.ElasticTransform(p=0.4, alpha=50, sigma=20),
+                A.Affine(p=0.8, translate_percent=(-0.2, 0.2), scale=(0.75, 1.25), rotate=(-5, 5)),
+                A.GaussianBlur(p=0.6, blur_limit=0, sigma_limit=(0.1, 2.0)),
+                A.Lambda(name='gauss-noise', image=custom_gauss_noise, p=0.5),
+                A.GridDropout(p=0.3, ratio=0.3, random_offset=True),
+                #A.Lambda(name='normalize', image=custom_normalize, p=1.0),
+                A.Lambda(name='normalize', image=normalize, p=1.0),
+                A.Lambda(name='to_tensor', image=custom_to_tensor, mask=custom_to_tensor, p=1.0)
+            ]
+            )
 
-    #use albumentations library
-    training_transform = A.Compose(
-        [   
-            #A.RandomRotate90(p=1),
-            #A.RandomCrop(crop_window, crop_window, p=1),
-            CellAwareCrop(p=1,crop_size=crop_window, min_cell_fraction=0.05, max_attempts=20),
-            A.GridDistortion(p=0.4),
-            #A.ElasticTransform(p=0.4, alpha=50, sigma=20),
-            A.Affine(p=0.8, translate_percent=(-0.2, 0.2), scale=(0.75, 1.25), rotate=(-5, 5)),
-            A.GaussianBlur(p=0.6, blur_limit=0, sigma_limit=(0.1, 2.0)),
-            A.Lambda(name='gauss-noise', image=custom_gauss_noise, p=0.5),
-            A.GridDropout(p=0.3, ratio=0.3, random_offset=True),
-            #A.Lambda(name='normalize', image=custom_normalize, p=1.0),
-            A.Lambda(name='normalize', image=custom_normalize99, p=1.0),
-            A.Lambda(name='to_tensor', image=custom_to_tensor, mask=custom_to_tensor, p=1.0)
-        ]
-        )
-
-    """
-    training_dataset = custom_loader_training( phase_ims = phase_train,
-                                               mask_ims  = mask_train,
-                                               transform = training_transform)
-
-    validate_dataset = custom_loader_training(phase_ims = phase_val,
-                                              mask_ims = mask_val,
-                                              transform = A.Compose([A.PadIfNeeded(min_height=None, min_width=None,
-                                                                                   pad_height_divisor=16, pad_width_divisor=16,
-                                                                                   border_mode=0),   # zero-pad to next multiple of 16
-                                                                    A.Lambda(name='normalize', image=custom_normalize, p=1.0),
-                                                                    A.Lambda(name='to_tensor', image=custom_to_tensor, mask=custom_to_tensor, p=1.0),
-                                                                    ]))
-    """
     training_dataset = custom_loader_training( phase_ims = phase,
                                                mask_ims  = mask,
                                                transform = training_transform)
@@ -104,7 +62,7 @@ def train_net(save_name=None, train='cells', net_size=256):
                                               transform = A.Compose([A.PadIfNeeded(min_height=None, min_width=None,
                                                                                    pad_height_divisor=16, pad_width_divisor=16,
                                                                                    border_mode=0),   # zero-pad to next multiple of 16
-                                                                    A.Lambda(name='normalize', image=custom_normalize, p=1.0),
+                                                                    A.Lambda(name='normalize', image=normalize, p=1.0),
                                                                     A.Lambda(name='to_tensor', image=custom_to_tensor, mask=custom_to_tensor, p=1.0),
                                                                     ]))
 
@@ -116,17 +74,25 @@ def train_net(save_name=None, train='cells', net_size=256):
     validation_loader = DataLoader(validate_dataset, batch_size=1, shuffle=False)
 
     #optimizer = torch.optim.SGD(net.parameters(), lr = 0.01, momentum = 0.9)
-    optimizer = torch.optim.Adam(net.parameters(), lr=1e-4)
+    if optimizer is None:
+        optimizer = torch.optim.Adam(net.parameters(), lr=1e-4)
     #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = 5, gamma = 0.5)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
+    if scheduler is None:
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
     #scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,mode='min',factor=0.3,patience=5,verbose=True)
-    num_epochs = 120
-    
+
+    ts = time.time()
+    ts = datetime.datetime.fromtimestamp(ts).strftime('%y%m%d_%H%M%S')
+    net_name = f'unetTB_{net_size}_'+ts+'.pth'
+    print(net_name)
+    #save_name = f"{save_dir}/models/{net_name}.pth"
     classifier = mm_classifier(net=net, 
                                optimizer = optimizer, 
                                scheduler = scheduler, 
                                num_epochs = num_epochs, 
-                               save_name = save_name)
+                               save_dir = save_dir,
+                               net_name = net_name
+                               )
 
     classifier.train(training_loader, validation_loader)
  
