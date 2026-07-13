@@ -31,12 +31,16 @@ class custom_loader_training(Dataset):
         mask_im = io.imread(self.mask_ims[idx],as_gray=True).astype('float32') #albumentation needs 32bit
         
         # sample = {'im' : phase_im, 'mask' : mask_im}
+        #print(f'Initial image min and max: {phase_im.min(), phase_im.max()}')
         
         if self.transform is not None:
             transformed = self.transform(image = phase_im, mask = mask_im)
             image = transformed['image']
             mask = transformed['mask']
-            
+        else:
+            image = phase_im
+            mask = mask_im
+        #print(f'Transfored image min and max: {image.min(), image.max()}')
         return image, mask
         
 class custom_loader_segmentation(Dataset):

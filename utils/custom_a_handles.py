@@ -28,15 +28,14 @@ def custom_to_tensor(image, **kwargs):
     image = image.unsqueeze(0)
     return image
 
-def custom_gauss_noise(image,**kwargs):
+def custom_gauss_noise(image, sigma_range=(2,20), **kwargs):
     #HANDLE TO A CUSTOM NORMALIZATION FUNCTION TO BE USED WITH ALBUMENTATION LIBRARY LABMDA TRANSFORMATION FUNCTION
     # For 8-bit images (0-255): sigma 2-20 is realistic microscopy noise
-    sigma = np.random.uniform(2, 20)
+    sigma = np.random.uniform(*sigma_range)
     gauss = np.random.normal(0, sigma, image.shape)
     #print(f"image range: [{image.min()}, {image.max()}], noise range: [{gauss.min()}, {gauss.max()}]")
     return image + gauss
 
-    return image + gauss
 
 def main():
     pass

@@ -39,8 +39,8 @@ def train_net(train_dirs, save_dir, net_size=256, training_transform=None, norma
         training_transform = A.Compose(
             [
                 #A.RandomRotate90(p=1),
-                #A.RandomCrop(crop_window, crop_window, p=1),
-                CellAwareCrop(p=1,crop_size=crop_window, min_cell_fraction=0.05, max_attempts=20),
+                A.RandomCrop(crop_window, crop_window, p=1),
+                #CellAwareCrop(p=1,crop_size=crop_window, min_cell_fraction=0.05, max_attempts=20),
                 A.GridDistortion(p=0.4),
                 #A.ElasticTransform(p=0.4, alpha=50, sigma=20),
                 A.Affine(p=0.8, translate_percent=(-0.2, 0.2), scale=(0.75, 1.25), rotate=(-5, 5)),
@@ -75,7 +75,7 @@ def train_net(train_dirs, save_dir, net_size=256, training_transform=None, norma
 
     #optimizer = torch.optim.SGD(net.parameters(), lr = 0.01, momentum = 0.9)
     if optimizer is None:
-        optimizer = torch.optim.Adam(net.parameters(), lr=1e-4)
+        optimizer = torch.optim.AdamW(net.parameters(), lr=1e-4)
     #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = 5, gamma = 0.5)
     if scheduler is None:
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
@@ -84,8 +84,6 @@ def train_net(train_dirs, save_dir, net_size=256, training_transform=None, norma
     ts = time.time()
     ts = datetime.datetime.fromtimestamp(ts).strftime('%y%m%d_%H%M%S')
     net_name = f'unetTB_{net_size}_'+ts+'.pth'
-    print(net_name)
-    #save_name = f"{save_dir}/models/{net_name}.pth"
     classifier = mm_classifier(net=net, 
                                optimizer = optimizer, 
                                scheduler = scheduler, 
