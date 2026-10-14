@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import Dataset
 import numpy as np
 from skimage import io, transform, filters
+import cv2
 
 class custom_loader_training(Dataset):
  
@@ -13,9 +14,10 @@ class custom_loader_training(Dataset):
         important! the list must be in the same order.
         """
     
-    def __init__(self, phase_ims, mask_ims, transform=None):
+    def __init__(self, phase_ims, mask_ims, scales=None, transform=None):
         self.phase_ims = phase_ims
         self.mask_ims = mask_ims
+        self.scales = scales
         self.transform = transform
             
     def __len__(self):
@@ -27,11 +29,17 @@ class custom_loader_training(Dataset):
             idx = idx.tolist()
             
         #send to float32 type, PyTorch supposedly likes it
-        phase_im = io.imread(self.phase_ims[idx],as_gray=True).astype('float32')
+        phase_im = io.imread(self.phase_ims[idx],as_gray=True)#.astype('float32')
         mask_im = io.imread(self.mask_ims[idx],as_gray=True).astype('float32') #albumentation needs 32bit
         
         # sample = {'im' : phase_im, 'mask' : mask_im}
         #print(f'Initial image min and max: {phase_im.min(), phase_im.max()}')
+        if self.scales is not None and self.scales[idx] != 1.0:
+            s = self.scales[idx]
+            h, w = phase_im.shape[:2]
+            size = (round(w * s), round(h * s))
+            phase_im = cv2.resize(phase_im, size, interpolation=cv2.INTER_AREA)
+            mask_im = cv2.resize(mask_im, size, interpolation=cv2.INTER_NEAREST)
         
         if self.transform is not None:
             transformed = self.transform(image = phase_im, mask = mask_im)

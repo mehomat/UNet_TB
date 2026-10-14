@@ -1,5 +1,5 @@
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
+from torch.utils.data import DataLoader
+#from torchvision import transforms
 import torch
 
 from utils.custom_loader import custom_loader_training
@@ -13,9 +13,9 @@ import albumentations as A
 # from utils.unet import UNet
 from utils.unet import UNet
 
-from skimage import io
-import cv2
-import matplotlib.pyplot as plt
+#from skimage import io
+#import cv2
+#import matplotlib.pyplot as plt
 import numpy as np
 
 from utils.load_files import getTrainingPairs
@@ -25,11 +25,16 @@ import time, datetime
 
 from utils.cell_aware_crop import CellAwareCrop
 
-def train_net(train_dirs, save_dir, net_size=256, training_transform=None, normalize=custom_normalize99, num_epochs=120, scheduler=None, optimizer=None):
+def train_net(train_dirs, save_dir, net_size=256, training_transform=None, normalize=custom_normalize99, num_epochs=120, batch_size=4, scheduler=None, optimizer=None):
 
     #load the data
-    phase, mask = getTrainingPairs(train_dirs)
-   
+    phase, mask, scales = [], [], []
+    for d, nm, s in train_dirs:
+        p, m = getTrainingPairs([(d, nm)])
+        phase += p
+        mask += m
+        scales += [s] * len(p)
+
     print(f'Number of phase images: {len(phase)}')
     print(f'Number of binary masks : {len(mask)}')
 
@@ -55,10 +60,12 @@ def train_net(train_dirs, save_dir, net_size=256, training_transform=None, norma
 
     training_dataset = custom_loader_training( phase_ims = phase,
                                                mask_ims  = mask,
+                                               scales  = scales,
                                                transform = training_transform)
 
     validate_dataset = custom_loader_training(phase_ims = phase,
                                               mask_ims = mask,
+                                              scales  = scales,
                                               transform = A.Compose([A.PadIfNeeded(min_height=None, min_width=None,
                                                                                    pad_height_divisor=16, pad_width_divisor=16,
                                                                                    border_mode=0),   # zero-pad to next multiple of 16
@@ -70,7 +77,7 @@ def train_net(train_dirs, save_dir, net_size=256, training_transform=None, norma
     net = UNet(max_filters = net_size)
     net.to(device)
     
-    training_loader = DataLoader(training_dataset, batch_size=4, shuffle=True, num_workers = 10)
+    training_loader = DataLoader(training_dataset, batch_size=batch_size, shuffle=True, num_workers = 10)
     validation_loader = DataLoader(validate_dataset, batch_size=1, shuffle=False)
 
     #optimizer = torch.optim.SGD(net.parameters(), lr = 0.01, momentum = 0.9)

@@ -9,7 +9,7 @@ def custom_normalize99(image, **kwargs):
     image = np.array(image).astype(np.float32)
     image_copy = image.copy()
     return np.interp(image_copy, 
-                     (np.percentile(image_copy, lower), np.percentile(image_copy, upper)), (0, 1))
+                     (np.percentile(image_copy, lower), np.percentile(image_copy, upper)), (0, 1)).astype(np.float32)
 
 def custom_normalize(image, **kwargs):
     #HANDLE TO A CUSTOM NORMALIZATION FUNCTION TO BE USED WITH ALBUMENTATION LIBRARY LABMDA TRANSFORMATION FUNCTION
