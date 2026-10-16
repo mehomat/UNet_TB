@@ -22,21 +22,45 @@ from utils.load_files import getTrainingPairs
 
 from sklearn.model_selection import train_test_split
 import time, datetime
+import os, json
 
 from utils.cell_aware_crop import CellAwareCrop
 
-def train_net(train_dirs, save_dir, net_size=256, training_transform=None, normalize=custom_normalize99, num_epochs=120, batch_size=4, scheduler=None, optimizer=None):
+def train_net(train_dirs, save_dir, net_size=256, training_transform=None, normalize=custom_normalize99, num_epochs=120, batch_size=4, scheduler=None, optimizer=None, val_fraction=0.2, seed=0):
+    """
+    train_dirs entries: (dir, chan_name, scale) or (dir, chan_name, scale, val_fraction).
+    Each dataset is split separately into train/validation; val_fraction=0 puts all of it into training.
+    """
+    ts = time.time()
+    ts = datetime.datetime.fromtimestamp(ts).strftime('%y%m%d_%H%M%S')
+    net_name = f'unetTB_{net_size}_'+ts+'.pth'
 
-    #load the data
+    #load the data and split each dataset separately
     phase, mask, scales = [], [], []
-    for d, nm, s in train_dirs:
+    val_phase, val_mask, val_scales = [], [], []
+    for entry in train_dirs:
+        d, nm, s = entry[:3]
+        frac = entry[3] if len(entry) > 10 else val_fraction
         p, m = getTrainingPairs([(d, nm)])
+        if frac > 0:
+            p, vp, m, vm = train_test_split(p, m, test_size=frac, random_state=seed)
+        else:
+            vp, vm = [], []
         phase += p
         mask += m
         scales += [s] * len(p)
+        val_phase += vp
+        val_mask += vm
+        val_scales += [s] * len(vp)
+        print(f'{d}: {len(p)} train, {len(vp)} validation')
 
-    print(f'Number of phase images: {len(phase)}')
-    print(f'Number of binary masks : {len(mask)}')
+    print(f'Number of training images  : {len(phase)}')
+    print(f'Number of validation images: {len(val_phase)}')
+
+    #save the split next to the model so it can be reused for model comparisons
+    os.makedirs(save_dir + '/models', exist_ok=True)
+    with open(save_dir + '/models/' + net_name.replace('.pth', '_split.json'), 'w') as f:
+        json.dump({'train': phase, 'validation': val_phase, 'seed': seed}, f, indent=1)
 
     #specify transformations and unets
     if training_transform is None:
@@ -63,13 +87,14 @@ def train_net(train_dirs, save_dir, net_size=256, training_transform=None, norma
                                                scales  = scales,
                                                transform = training_transform)
 
-    validate_dataset = custom_loader_training(phase_ims = phase,
-                                              mask_ims = mask,
-                                              scales  = scales,
-                                              transform = A.Compose([A.PadIfNeeded(min_height=None, min_width=None,
+    validate_dataset = custom_loader_training(phase_ims = val_phase,
+                                              mask_ims = val_mask,
+                                              scales  = val_scales,
+                                              transform = A.Compose([
+                                                                    A.Lambda(name='normalize', image=normalize, p=1.0),
+                                                                    A.PadIfNeeded(min_height=None, min_width=None,
                                                                                    pad_height_divisor=16, pad_width_divisor=16,
                                                                                    border_mode=0),   # zero-pad to next multiple of 16
-                                                                    A.Lambda(name='normalize', image=normalize, p=1.0),
                                                                     A.Lambda(name='to_tensor', image=custom_to_tensor, mask=custom_to_tensor, p=1.0),
                                                                     ]))
 
@@ -88,9 +113,6 @@ def train_net(train_dirs, save_dir, net_size=256, training_transform=None, norma
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
     #scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,mode='min',factor=0.3,patience=5,verbose=True)
 
-    ts = time.time()
-    ts = datetime.datetime.fromtimestamp(ts).strftime('%y%m%d_%H%M%S')
-    net_name = f'unetTB_{net_size}_'+ts+'.pth'
     classifier = mm_classifier(net=net, 
                                optimizer = optimizer, 
                                scheduler = scheduler, 
